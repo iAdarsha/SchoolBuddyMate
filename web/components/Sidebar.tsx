@@ -36,10 +36,7 @@ const NAV: Record<Role, { href: string; labelKey: string; icon: IconComponent }[
   ],
   teacher: [
     { href: '/dashboard', labelKey: 'nav.dashboard', icon: HomeIcon },
-    // AI Chat is hidden from the teacher nav now that Discussions covers
-    // this role's AI use case — route/component/code all still live at
-    // /ai-chat, just unlinked here. Re-add this entry to bring it back.
-    // { href: '/ai-chat', labelKey: 'nav.aiChat', icon: ChatIcon },
+    { href: '/ai-chat', labelKey: 'nav.aiChat', icon: ChatIcon },
     { href: '/discussions', labelKey: 'nav.discussions', icon: BookIcon },
     { href: '/classes', labelKey: 'nav.classes', icon: GridIcon },
     { href: '/students', labelKey: 'nav.students', icon: UsersIcon },
@@ -48,7 +45,9 @@ const NAV: Record<Role, { href: string; labelKey: string; icon: IconComponent }[
   ],
   student: [
     { href: '/dashboard', labelKey: 'nav.dashboard', icon: HomeIcon },
-    // See the teacher array above — same reasoning, AI Chat unlinked, code untouched.
+    // AI Chat is hidden from the student nav — Discussions covers this
+    // role's AI use case now. Route/component/code all still live at
+    // /ai-chat, just unlinked here. Re-add this entry to bring it back.
     // { href: '/ai-chat', labelKey: 'nav.aiChat', icon: ChatIcon },
     { href: '/discussions', labelKey: 'nav.discussions', icon: BookIcon },
     { href: '/subjects', labelKey: 'nav.subjects', icon: GridIcon },

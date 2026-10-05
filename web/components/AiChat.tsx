@@ -37,6 +37,12 @@ interface ChatMessage {
   grounding?: ChatGrounding | null;
   feedback?: 1 | -1 | null;
   feedback_reason?: FeedbackReason | null;
+  // Display-only — never persisted on the user's own row. Set immediately
+  // from the File objects at send time, or reconstructed on load from the
+  // following assistant message's grounding.sources (kind: 'attachment'),
+  // since the raw file itself is never stored (see web/README.md's AI Chat
+  // section) — only Gemini's extracted description survives, as a source.
+  attachmentNames?: string[];
 }
 
 type FeedbackReason = 'incorrect' | 'missing_sources' | 'not_helpful' | 'unsafe';
@@ -80,6 +86,20 @@ function cleanVoiceTranscript(value: string) {
     else break;
   }
   return words.join(' ').replace(/\s+([?.!,])/g, '$1').trim();
+}
+
+// The raw file is never stored (only Gemini's extracted description
+// survives, as a grounding source on the ASSISTANT's reply) — so on load,
+// reattach each user turn's attachment filenames from the very next
+// message's grounding.sources, the only place they're actually persisted.
+function withAttachmentNames(history: ChatMessage[]): ChatMessage[] {
+  return history.map((message, index) => {
+    if (message.role !== 'user') return message;
+    const reply = history[index + 1];
+    if (!reply || reply.role !== 'assistant') return message;
+    const names = (reply.grounding?.sources ?? []).filter((source) => source.kind === 'attachment').map((source) => source.label);
+    return names.length ? { ...message, attachmentNames: names } : message;
+  });
 }
 
 interface SpeechRecognitionAlternativeLike { transcript: string; confidence?: number }
@@ -597,7 +617,7 @@ export default function AiChat({ role, userId }: { role: Role; userId: string })
         supabase.from('ai_chat_sessions').select('class_id, chapter').eq('id', id).single(),
       ]);
       if (loadError) throw new Error(t('chat.historyLoadFailed'));
-      setMessages((data ?? []) as ChatMessage[]);
+      setMessages(withAttachmentNames((data ?? []) as ChatMessage[]));
       setActiveSessionId(id);
       localStorage.setItem(activeChatStorageKey, id);
       if (sessionRow?.class_id) {
@@ -644,15 +664,20 @@ export default function AiChat({ role, userId }: { role: Role; userId: string })
   const sendMessage = async (textValue: string, priorMessages: ChatMessage[] = messages, voiceTurn = false, filesOverride?: File[]) => {
     const text = textValue.trim();
     if (!text || loading) return;
-    const nextMessages: ChatMessage[] = [...priorMessages, { role: 'user', text }];
+    const filesToSend = filesOverride ?? attachments;
+    const nextMessages: ChatMessage[] = [
+      ...priorMessages,
+      { role: 'user', text, attachmentNames: filesToSend.length ? filesToSend.map((file) => file.name) : undefined },
+    ];
     messagesRef.current = nextMessages;
     setMessages(nextMessages);
     setInput('');
+    setAttachments([]);
     setLoading(true);
     setError(undefined);
 
     try {
-      const encodedAttachments = await encodeAttachments(filesOverride);
+      const encodedAttachments = await encodeAttachments(filesOverride ?? filesToSend);
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -667,7 +692,6 @@ export default function AiChat({ role, userId }: { role: Role; userId: string })
         localStorage.setItem(activeChatStorageKey, data.sessionId);
       }
       if (data.historySaved === false) setError(t('chat.historySaveFailed'));
-      setAttachments([]);
       loadSessions();
       if (voiceTurn && conversationRef.current) {
         setConversationStatus('speaking');
@@ -734,7 +758,7 @@ export default function AiChat({ role, userId }: { role: Role; userId: string })
         .order('created_at', { ascending: true })
         .order('id', { ascending: true });
       if (loadError) return;
-      setMessages((restoredMessages ?? []) as ChatMessage[]);
+      setMessages(withAttachmentNames((restoredMessages ?? []) as ChatMessage[]));
       setActiveSessionId(sessionToRestore.id);
       localStorage.setItem(activeChatStorageKey, sessionToRestore.id);
       if (sessionToRestore.class_id) {
@@ -1016,6 +1040,19 @@ export default function AiChat({ role, userId }: { role: Role; userId: string })
                 </div>
               ) : (
                 message.text
+              )}
+              {message.role === 'user' && message.attachmentNames && message.attachmentNames.length > 0 && (
+                <div className="mt-1.5 flex flex-wrap justify-end gap-1">
+                  {message.attachmentNames.map((name, nameIndex) => (
+                    <span
+                      key={`${name}-${nameIndex}`}
+                      className="flex max-w-full items-center gap-1 rounded-md bg-primary-foreground/15 px-2 py-1 text-xs text-primary-foreground"
+                    >
+                      <PaperclipIcon width={11} className="shrink-0" />
+                      <span className="truncate">{name}</span>
+                    </span>
+                  ))}
+                </div>
               )}
               {message.role === 'assistant' && <ChatSources grounding={message.grounding} />}
               {message.role === 'assistant' && (
