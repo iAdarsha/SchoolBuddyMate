@@ -34,6 +34,7 @@ export default function LearningVideosClient({
   const canTrack = role === 'student';
   const [videos, setVideos] = useState(initialVideos);
   const [creating, setCreating] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [activeVideoId, setActiveVideoId] = useState(initialVideos[0]?.id ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
@@ -42,6 +43,11 @@ export default function LearningVideosClient({
   const [videoUrl, setVideoUrl] = useState('');
   const [duration, setDuration] = useState('');
   const [description, setDescription] = useState('');
+  const [generationTopic, setGenerationTopic] = useState('');
+  const [generationObjectives, setGenerationObjectives] = useState('');
+  const [generationStyle, setGenerationStyle] = useState('clear and engaging');
+  const [generationDuration, setGenerationDuration] = useState('3');
+  const [generationLanguage, setGenerationLanguage] = useState('English');
   const activeVideo = useMemo(() => videos.find((item) => item.id === activeVideoId) ?? videos[0], [activeVideoId, videos]);
   const embedUrl = activeVideo ? getVideoEmbedUrl(activeVideo.video_url) : null;
 
@@ -137,12 +143,55 @@ export default function LearningVideosClient({
             {canManage ? 'Share YouTube or Vimeo lessons with your classes and watch completion.' : 'Watch published class lessons and track your progress.'}
           </p>
         </div>
-        {canManage && (
-          <button onClick={() => setCreating(true)} disabled={!classes.length} className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground disabled:opacity-40">
-            <PlusIcon width={16} /> Add video
+        {canManage && <div className="flex flex-wrap gap-2">
+          <button onClick={() => setGenerating((value) => !value)} disabled={!classes.length} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-40">
+            <PlayCircleIcon width={16} /> Create with AI
           </button>
-        )}
+          <button onClick={() => setCreating(true)} disabled={!classes.length} className="flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground disabled:opacity-40">
+            <PlusIcon width={16} /> Add existing video
+          </button>
+        </div>}
       </div>
+
+      {canManage && generating && (
+        <section className="mt-6 overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-card to-card shadow-sm">
+          <div className="border-b border-primary/10 px-5 py-5 sm:px-6">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">HeyGen Video Agent</p>
+            <h2 className="mt-1 text-xl font-bold text-foreground">Create a lesson video for your class</h2>
+            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Describe the lesson and HeyGen will create a narrated presenter video. It will stay private until you publish it.</p>
+          </div>
+          <form onSubmit={(event) => { event.preventDefault(); setError('HeyGen generation is ready for API connection. Add HEYGEN_API_KEY to enable video creation.'); }} className="grid gap-4 px-5 py-5 sm:grid-cols-2 sm:px-6">
+            <label className="text-sm font-semibold text-foreground">Class
+              <select value={classId} onChange={(event) => setClassId(event.target.value)} className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 font-normal">
+                {classes.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+              </select>
+            </label>
+            <label className="text-sm font-semibold text-foreground">Lesson topic
+              <input value={generationTopic} onChange={(event) => setGenerationTopic(event.target.value)} required placeholder="e.g. Photosynthesis" className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 font-normal" />
+            </label>
+            <label className="text-sm font-semibold text-foreground sm:col-span-2">Learning objectives
+              <textarea value={generationObjectives} onChange={(event) => setGenerationObjectives(event.target.value)} required rows={3} placeholder="What should students understand by the end?" className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 font-normal" />
+            </label>
+            <label className="text-sm font-semibold text-foreground">Teaching style
+              <select value={generationStyle} onChange={(event) => setGenerationStyle(event.target.value)} className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 font-normal">
+                <option>clear and engaging</option><option>formal classroom lecture</option><option>friendly and visual</option><option>exam revision</option>
+              </select>
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="text-sm font-semibold text-foreground">Minutes
+                <input type="number" min={1} max={15} value={generationDuration} onChange={(event) => setGenerationDuration(event.target.value)} className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 font-normal" />
+              </label>
+              <label className="text-sm font-semibold text-foreground">Language
+                <select value={generationLanguage} onChange={(event) => setGenerationLanguage(event.target.value)} className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 font-normal"><option>English</option><option>Hindi</option><option>Telugu</option><option>Spanish</option></select>
+              </label>
+            </div>
+            <div className="flex items-center justify-end gap-2 sm:col-span-2">
+              <button type="button" onClick={() => setGenerating(false)} className="rounded-lg px-4 py-2 text-sm font-semibold text-muted-foreground">Cancel</button>
+              <button disabled={!generationTopic.trim() || !generationObjectives.trim()} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-40">Generate lesson video</button>
+            </div>
+          </form>
+        </section>
+      )}
 
       {error && <p className="mt-4 rounded-lg bg-danger/10 p-3 text-sm text-danger">{error}</p>}
 
