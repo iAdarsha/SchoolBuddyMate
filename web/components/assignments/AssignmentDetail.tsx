@@ -3,6 +3,7 @@
 import { submitAssignment } from '@shared/api/submissions';
 
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useState } from 'react';
 import { useLanguage } from '@/components/LanguageProvider';
 import { createClient } from '@/lib/supabase/client';
@@ -59,14 +60,16 @@ export function StudentAssignmentView({
   const [submission, setSubmission] = useState(initialSubmission);
   const [selected, setSelected] = useState<Record<string, number>>({});
   const [text, setText] = useState('');
+  const isMcq = !!assignment.questions && assignment.questions.length > 0;
+  const writtenQuestions = !isMcq ? (assignment.description?.split('\n\nQuestions:\n')[1]?.split('\n').filter(Boolean) ?? []) : [];
+  const [writtenAnswers, setWrittenAnswers] = useState<string[]>(() => writtenQuestions.map(() => ''));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string>();
 
   const status = getEffectiveStatus(assignment);
-  const isMcq = !!assignment.questions && assignment.questions.length > 0;
   const canSubmit = isMcq
     ? assignment.questions!.every((q) => selected[q.id] !== undefined)
-    : text.trim().length > 0;
+    : writtenQuestions.length ? writtenAnswers.every((answer) => answer.trim().length > 0) : text.trim().length > 0;
 
   const submit = async () => {
     setSubmitting(true);
@@ -74,7 +77,7 @@ export function StudentAssignmentView({
     try {
       const answers = isMcq
         ? Object.entries(selected).map(([id, selected_index]) => ({ id, selected_index }))
-        : { text: text.trim() };
+        : { text: writtenQuestions.length ? writtenQuestions.map((question, index) => `${question}\n${writtenAnswers[index] ?? ''}`).join('\n\n') : text.trim() };
       const data = await submitAssignment({ assignmentId: assignment.id, answers });
       setSubmission(data);
     } catch (cause) {
@@ -87,6 +90,8 @@ export function StudentAssignmentView({
   return (
     <div>
       <Header assignment={assignment} contextLabel={contextLabel} />
+
+      {!submission && status === 'active' && <div className="mt-5 rounded-xl border border-primary/20 bg-primary/5 p-4"><p className="text-sm font-semibold text-foreground">Need help studying?</p><p className="mt-1 text-sm text-muted-foreground">Talk through these questions with School Buddy Live, then return here to review and submit your answers.</p><Link href={`/learning-videos?mode=live&autostart=1&classId=${encodeURIComponent(assignment.class_id)}&assignmentId=${encodeURIComponent(assignment.id)}`} className="mt-3 inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Study with School Buddy Live</Link></div>}
 
       <div className="mt-8">
         {status === 'cancelled' ? (
@@ -118,6 +123,7 @@ export function StudentAssignmentView({
                   </div>
                 )}
                 {submission.feedback && <p className="mt-2 text-sm text-muted-foreground">{submission.feedback}</p>}
+                <Link href={`/learning-videos?mode=live&autostart=1&classId=${encodeURIComponent(assignment.class_id)}&assignmentId=${encodeURIComponent(assignment.id)}`} className="mt-4 inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Study this with School Buddy</Link>
               </>
             ) : (
               <p className="text-sm text-muted-foreground">
@@ -161,14 +167,14 @@ export function StudentAssignmentView({
             </button>
           </div>
         ) : (
-          <div className="space-y-3">
-            <textarea
+          <div className="space-y-4">
+            {writtenQuestions.length ? writtenQuestions.map((question, index) => <div key={`${question}-${index}`} className="rounded-xl border border-border bg-card p-4 shadow-sm"><p className="font-medium text-foreground">{question}</p><textarea value={writtenAnswers[index] ?? ''} onChange={(event) => setWrittenAnswers((current) => current.map((answer, answerIndex) => answerIndex === index ? event.target.value : answer))} rows={4} placeholder={t('assignment.writeYourAnswer')} className="mt-3 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary" /></div>) : <textarea
               value={text}
               onChange={(event) => setText(event.target.value)}
               rows={6}
               placeholder={t('assignment.writeYourAnswer')}
               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
-            />
+            />}
             {error && <p className="text-sm text-danger">{error}</p>}
             <button
               onClick={submit}
@@ -431,6 +437,17 @@ function GradeForm({
   const [feedback, setFeedback] = useState(submission.feedback ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
+  const [generating, setGenerating] = useState(false);
+  const [suggestion, setSuggestion] = useState('');
+
+  const generateFeedback = async () => {
+    setGenerating(true); setError(undefined);
+    const response = await fetch('/api/gemini/generate-feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: 'assessment', score, maxScore: maxScoreValue, passed, answers: submission.answers }) });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) setError(data.error ?? 'Could not generate feedback.');
+    else { setFeedback(data.feedback ?? ''); setSuggestion(data.study_suggestion ?? ''); }
+    setGenerating(false);
+  };
 
   const save = async () => {
     const supabase = createClient();
@@ -443,7 +460,7 @@ function GradeForm({
         score: hasRubric ? rubricTotal : score,
         max_score: hasRubric ? rubricMax : maxScoreValue,
         passed,
-        feedback: feedback.trim() || null,
+        feedback: [feedback.trim(), suggestion.trim() ? `Study suggestion: ${suggestion.trim()}` : ''].filter(Boolean).join('\n\n') || null,
         status: 'graded',
         graded_at: new Date().toISOString(),
         rubric_scores: hasRubric ? rubric!.map((c) => ({ id: c.id, points: criterionPoints[c.id] ?? 0 })) : null,
@@ -526,6 +543,8 @@ function GradeForm({
         placeholder={t('assignment.feedbackOptional')}
         className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
       />
+      <button type="button" onClick={() => void generateFeedback()} disabled={generating} className="rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary disabled:opacity-50">{generating ? 'Generating…' : 'Suggest feedback with School Buddy'}</button>
+      {suggestion && <p className="rounded-lg bg-primary/5 p-3 text-sm text-foreground"><strong>Study suggestion:</strong> {suggestion}</p>}
       {error && <p className="text-sm text-danger">{error}</p>}
       <button
         onClick={save}

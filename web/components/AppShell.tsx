@@ -7,6 +7,7 @@ import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { MenuIcon, SparkleIcon, XIcon } from '@/components/icons';
 import { APP_CONFIG } from '@/constants/config';
 import type { Role } from '@/lib/supabase/profile';
+import LearningNotifications from '@/components/LearningNotifications';
 
 const PAGE_NAMES: Record<string, string> = {
   dashboard: 'Dashboard',
@@ -32,13 +33,11 @@ export default function AppShell({ role, name, children }: { role: Role; name: s
     <div className="flex min-h-screen w-full flex-col bg-background">
       <header className="sticky top-0 z-30 flex items-center justify-between bg-[#171936] px-4 py-3 text-white shadow-md md:hidden">
         <span className="font-heading text-sm font-semibold">{APP_CONFIG.name}</span>
-        <button
-          onClick={() => setOpen(true)}
-          aria-label="Open menu"
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-white hover:bg-white/10"
-        >
-          <MenuIcon />
-        </button>
+        <div className="flex items-center gap-2"><LearningNotifications /><button
+            onClick={() => setOpen(true)}
+            aria-label="Open menu"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-white hover:bg-white/10"
+          ><MenuIcon /></button></div>
       </header>
 
       {open && <div className="fixed inset-0 z-40 bg-foreground/30" onClick={() => setOpen(false)} />}
@@ -76,6 +75,7 @@ export default function AppShell({ role, name, children }: { role: Role; name: s
             </div>
           </div>
           <div className="flex items-center gap-4">
+            <LearningNotifications />
             <div className="hidden w-52 lg:block"><LanguageSwitcher /></div>
             <div className="h-8 w-px bg-border-soft" />
             <div className="flex items-center gap-3">

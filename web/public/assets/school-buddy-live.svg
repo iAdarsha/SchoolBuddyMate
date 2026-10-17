@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 360" role="img" aria-label="Animated School Buddy">
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#38d3dc"/><stop offset="1" stop-color="#1689c5"/></linearGradient>
+    <linearGradient id="book" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8068e9"/><stop offset="1" stop-color="#4f42b9"/></linearGradient>
+  </defs>
+  <style>
+    .buddy { transform-origin: 160px 300px; animation: buddy-float 2.8s ease-in-out infinite; }
+    .arm-left { transform-origin: 83px 244px; animation: wave-left 2.4s ease-in-out infinite; }
+    .arm-right { transform-origin: 236px 244px; animation: wave-right 2.1s ease-in-out infinite; }
+    .eye { transform-origin: center; animation: blink 4.6s ease-in-out infinite; }
+    .mouth { transform-origin: 160px 185px; animation: talk 1s ease-in-out infinite; }
+    .cap { transform-origin: 160px 74px; animation: cap-wiggle 3s ease-in-out infinite; }
+    @keyframes buddy-float { 0%,100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-8px) rotate(1deg); } }
+    @keyframes wave-left { 0%,100% { transform: rotate(0); } 45% { transform: rotate(-10deg); } 65% { transform: rotate(5deg); } }
+    @keyframes wave-right { 0%,100% { transform: rotate(0); } 40% { transform: rotate(8deg); } 60% { transform: rotate(-4deg); } }
+    @keyframes blink { 0%,43%,47%,100% { transform: scaleY(1); } 45% { transform: scaleY(.08); } }
+    @keyframes talk { 0%,100% { transform: scaleY(.35); } 50% { transform: scaleY(1); } }
+    @keyframes cap-wiggle { 0%,100% { transform: rotate(-2deg); } 50% { transform: rotate(3deg); } }
+    @media (prefers-reduced-motion: reduce) { .buddy,.arm-left,.arm-right,.eye,.mouth,.cap { animation: none; } }
+  </style>
+  <g class="buddy">
+    <ellipse cx="160" cy="338" rx="78" ry="12" fill="#5264c9" opacity=".18"/>
+    <path d="M93 238 Q55 228 58 190 Q61 174 76 181 L111 225Z" fill="#27b9d6" class="arm-left"/>
+    <path d="M227 230 Q270 218 270 184 Q268 169 254 179 L216 222Z" fill="#27b9d6" class="arm-right"/>
+    <path d="M92 215 Q95 168 160 158 Q225 168 228 215 L215 303 Q160 330 105 303Z" fill="url(#body)"/>
+    <ellipse cx="160" cy="275" rx="46" ry="34" fill="#b5f0ed" opacity=".9"/>
+    <path d="M110 112 Q115 45 160 35 Q205 45 210 112 L202 195 Q160 225 118 195Z" fill="#51d8d8"/>
+    <path d="M113 104 Q130 66 160 70 Q190 66 207 104 Q199 161 160 178 Q121 161 113 104Z" fill="#b8f2ee"/>
+    <g class="eye"><ellipse cx="137" cy="119" rx="17" ry="23" fill="#fff"/><ellipse cx="183" cy="119" rx="17" ry="23" fill="#fff"/><circle cx="139" cy="123" r="9" fill="#27345f"/><circle cx="181" cy="123" r="9" fill="#27345f"/><circle cx="136" cy="119" r="3" fill="#fff"/><circle cx="178" cy="119" r="3" fill="#fff"/></g>
+    <path d="M145 153 Q160 162 175 153" fill="none" stroke="#2771a8" stroke-width="4" stroke-linecap="round"/>
+    <ellipse class="mouth" cx="160" cy="181" rx="15" ry="8" fill="#7d315d"/>
+    <path d="M110 91 Q160 62 210 91 L200 72 L160 49 L120 72Z" fill="#4d43a8" class="cap"/>
+    <path d="M160 49 L253 71 L160 84Z" fill="#6259c8" class="cap"/><circle cx="253" cy="71" r="5" fill="#ffd44f"/>
+    <path d="M160 85 L160 106" stroke="#f5b82e" stroke-width="4"/><path d="M154 104 Q160 116 166 104" fill="none" stroke="#f5b82e" stroke-width="4"/>
+    <path d="M112 215 Q160 198 208 215 L215 268 Q160 287 105 268Z" fill="url(#book)" stroke="#fff" stroke-opacity=".35" stroke-width="3"/>
+    <path d="M160 207 V278" stroke="#f8d96a" stroke-width="3"/><path d="M124 228 H151 M124 240 H151 M169 228 H196 M169 240 H196" stroke="#d9d2ff" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="72" cy="198" r="7" fill="#f6c94d"/><circle cx="254" cy="194" r="7" fill="#f6c94d"/>
+  </g>
+</svg>

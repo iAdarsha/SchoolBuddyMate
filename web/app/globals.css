@@ -1,21 +1,20 @@
 @import "tailwindcss";
 
-/* Web dashboard palette: cool canvas, indigo navigation and lively status
-   colours. Native parity is tracked separately while web is the active
-   product surface. */
+/* School Buddy educational palette: trustworthy blue, soft study surfaces,
+   and warm cream accents that keep the product friendly for students. */
 :root {
-  --background: #F4F6FC;
-  --foreground: #20233C;
+  --background: #F4F8FC;
+  --foreground: #172554;
   --card: #FFFFFF;
-  --border: #E2E6F2;
-  --border-soft: #ECEDF6;
-  --muted-foreground: #70758F;
-  --muted-foreground-2: #9A9EB4;
-  --secondary: #EEF0FA;
-  --primary: #5B5BD6;
+  --border: #D7E3F0;
+  --border-soft: #E7EFF7;
+  --muted-foreground: #60708C;
+  --muted-foreground-2: #8B99AF;
+  --secondary: #EAF3FA;
+  --primary: #3B58B6;
   --primary-foreground: #FFFFFF;
-  --primary-light: #E9E9FF;
-  --accent: #FF6B4A;
+  --primary-light: #D7EAF7;
+  --accent: #E8893D;
   --accent-foreground: #FFFFFF;
   --success: #20B486;
   --warning: #F3A83B;
@@ -62,8 +61,8 @@ body {
 
 .app-canvas {
   background:
-    radial-gradient(circle at 78% 4%, rgba(91, 91, 214, 0.09), transparent 25rem),
-    radial-gradient(circle at 15% 90%, rgba(67, 138, 243, 0.06), transparent 28rem),
+    radial-gradient(circle at 78% 4%, rgba(59, 88, 182, 0.10), transparent 25rem),
+    radial-gradient(circle at 15% 90%, rgba(215, 234, 247, 0.7), transparent 28rem),
     var(--background);
 }
 
@@ -173,6 +172,268 @@ button.bg-primary:hover:not(:disabled), a.bg-primary:hover {
   from { opacity: 0; transform: translateY(14px) scale(0.985); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+
+@keyframes cloud-breathe {
+  0%, 100% { transform: scale(1) rotate(-2deg); filter: saturate(1); }
+  25% { transform: scale(1.08, .96) rotate(2deg); filter: saturate(1.3) brightness(1.08); }
+  50% { transform: scale(.96, 1.08) rotate(-1deg); filter: saturate(1.5) brightness(1.14); }
+  75% { transform: scale(1.06, .98) rotate(3deg); filter: saturate(1.25) brightness(1.05); }
+}
+
+@keyframes cloud-drift {
+  0%, 100% { transform: translate3d(-14px, 4px, 0) scale(.9) rotate(-8deg); }
+  50% { transform: translate3d(22px, -14px, 0) scale(1.3) rotate(10deg); }
+}
+
+/* Align the voice ring with the cloud rather than the wider animation frame. */
+.relative.mx-auto.h-56.w-72 > div:first-child {
+  display: none !important;
+}
+
+/* Keep the idle orb still; only the microphone/speaking state should animate it. */
+.animate-\[cloud-breathe_4s_ease-in-out_infinite\] {
+  animation: none !important;
+}
+
+/* Keep the Live Voice stage in the School Buddy light theme while connected. */
+.bg-\[\#090d16\] {
+  background-color: hsl(var(--background)) !important;
+}
+
+/* Live voice is an audio-first experience; keep the transcript panel out of this view. */
+.mt-6.space-y-3:has(> h2) {
+  display: none !important;
+}
+
+/* School Buddy character treatment for the live voice orb. */
+.relative.mx-auto.h-56.w-72 > div:nth-child(2)::before {
+  content: '•  •';
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  top: 38%;
+  transform: translateX(-50%);
+  color: #414dba;
+  font-size: 1.45rem;
+  font-weight: 800;
+  letter-spacing: 0.45rem;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* Replace the temporary orb with the friendly School Buddy mascot. */
+.relative.mx-auto.h-56.w-72 > div:nth-child(2) {
+  left: 2rem !important;
+  top: -1rem !important;
+  width: 13rem !important;
+  height: 13rem !important;
+  overflow: visible !important;
+  border-radius: 0 !important;
+  background: url('/assets/school-buddy-red-panda.svg') center / contain no-repeat !important;
+  box-shadow: none !important;
+}
+
+/* Keep the current voice state visible beside the lesson picker. */
+.mt-5.grid.rounded-2xl > div {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  right: 50%;
+  top: -3.25rem;
+  transform: translateX(50%);
+}
+
+.mt-5.grid.rounded-2xl {
+  padding: .65rem .85rem !important;
+  border-radius: .9rem !important;
+  margin-top: 1.25rem !important;
+  position: relative;
+  z-index: 3;
+  background: transparent !important;
+  border-color: transparent !important;
+  max-width: 42rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.mt-5.grid.rounded-2xl select {
+  margin-top: .35rem !important;
+  padding: .45rem .65rem !important;
+  font-size: .82rem !important;
+}
+
+/* Explicit layout rules for the live voice footer. */
+footer.mt-5 {
+  width: min(100%, 42rem) !important;
+  margin: 1.25rem auto 0 !important;
+  padding: .65rem .85rem !important;
+  position: relative !important;
+  background: transparent !important;
+  border-color: transparent !important;
+}
+
+footer.mt-5 > label {
+  width: 100%;
+}
+
+footer.mt-5 > div {
+  position: static !important;
+  right: auto !important;
+  top: auto !important;
+  transform: none !important;
+  white-space: normal;
+  width: 100%;
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .75rem;
+  margin-top: .75rem;
+}
+
+@media (max-width: 640px) {
+  footer.mt-5 > div { grid-template-columns: 1fr; }
+}
+
+@media (min-width: 1500px) {
+  .live-voice-layout {
+    width: 100% !important;
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box;
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+    min-height: calc(100vh - 150px);
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr) 340px;
+    grid-template-areas:
+      "tabs tabs tabs"
+      "history voice resume"
+      "history voice actions";
+    align-items: start;
+    column-gap: 1.25rem;
+  }
+
+  .live-voice-layout > div:has(#continue-lesson-title) { grid-area: resume; }
+  .live-voice-layout > .live-session-history { grid-area: history; }
+  .live-voice-layout > div:has(.mt-6.rounded-2xl) { grid-area: voice; min-width: 0; }
+  .live-voice-layout > div:has(> button) { grid-area: actions; }
+  .live-voice-layout .live-session-history { margin-bottom: 0 !important; }
+  .live-voice-layout .live-session-history,
+  .live-voice-layout > div:has(#continue-lesson-title) { min-height: 18rem; }
+  .live-voice-layout .live-session-history > div:last-child { max-height: calc(100vh - 330px); overflow-y: auto; padding-right: .25rem; }
+  .live-voice-layout .live-session-history { width: 100%; }
+  .live-voice-layout .live-session-history > div:last-child { grid-template-columns: 1fr !important; }
+  .live-voice-layout > div:has(> button) { justify-content: flex-start; margin-top: -1rem; }
+}
+
+footer.mt-5 select {
+  width: 100% !important;
+  min-height: 2.5rem;
+}
+
+footer.mt-5 > .live-paused-message {
+  position: absolute !important;
+  left: 50%;
+  top: -8.5rem;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: min(90vw, 28rem);
+  border: 1px solid rgba(99, 102, 241, .2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .96);
+  padding: .65rem 1rem;
+  text-align: center;
+  font-weight: 700;
+  color: #5963d6;
+  box-shadow: 0 8px 24px rgba(49, 57, 120, .12);
+}
+
+
+.mt-6.rounded-2xl > p {
+  font-size: .95rem !important;
+  font-weight: 700 !important;
+}
+
+.mt-6.rounded-2xl {
+  min-height: 20rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.mt-6.rounded-2xl > .relative.mx-auto.h-56.w-72 {
+  margin-bottom: .25rem;
+}
+
+.relative.mx-auto.h-56.w-72 > div:nth-child(2)::before,
+.relative.mx-auto.h-56.w-72 > div:nth-child(2)::after,
+.relative.mx-auto.h-56.w-72 > div:nth-child(2) > div {
+  display: none !important;
+}
+
+.relative.mx-auto.h-56.w-72 > div:nth-child(2)::after {
+  content: '';
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  top: 57%;
+  width: 1.6rem;
+  height: 0.55rem;
+  transform: translateX(-50%);
+  border-bottom: 3px solid #5968d6;
+  border-radius: 0 0 999px 999px;
+  animation: buddy-talk 1.1s ease-in-out infinite;
+}
+
+@keyframes buddy-talk {
+  0%, 100% { width: 1.15rem; height: 0.3rem; }
+  50% { width: 1.8rem; height: 0.7rem; }
+}
+
+@keyframes buddy-signal {
+  0%, 100% { opacity: 0.25; transform: scale(0.92); }
+  50% { opacity: 0.75; transform: scale(1.04); }
+}
+
+.relative.mx-auto.h-56.w-72::after {
+  display: none !important;
+}
+
+/* A more expressive live companion motion while audio is active. */
+.relative.mx-auto.h-56.w-72 > div:nth-child(2).animate-\[cloud-breathe_1\.1s_ease-in-out_infinite\] {
+  animation: buddy-live 1.05s ease-in-out infinite !important;
+}
+
+@keyframes buddy-live {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-2deg) scale(1); }
+  18% { transform: translate3d(-0.35rem, -0.15rem, 0) rotate(-5deg) scale(1.015); }
+  38% { transform: translate3d(0.2rem, 0.15rem, 0) rotate(3deg) scale(0.99); }
+  58% { transform: translate3d(0.42rem, -0.1rem, 0) rotate(5deg) scale(1.02); }
+  78% { transform: translate3d(-0.15rem, 0.12rem, 0) rotate(-3deg) scale(0.99); }
+}
+
+/* The inner artwork gets a little vocal energy during the active state. */
+.relative.mx-auto.h-56.w-72 > div:nth-child(2).animate-\[cloud-breathe_1\.1s_ease-in-out_infinite\]::before {
+  content: '♪';
+  display: block !important;
+  position: absolute;
+  z-index: 8;
+  right: -0.35rem;
+  top: 1.5rem;
+  color: #5f6ce0;
+  font-size: 1.35rem;
+  animation: buddy-note 0.8s ease-in-out infinite;
+}
+
+@keyframes buddy-note {
+  0%, 100% { opacity: 0; transform: translateY(0) rotate(-8deg); }
+  35%, 75% { opacity: 1; transform: translateY(-0.65rem) rotate(8deg); }
+}
+
+@keyframes school-float {
+  0%, 100% { transform: translateY(0) rotate(-5deg); }
+  50% { transform: translateY(-8px) rotate(5deg); }
+}
 .animate-dashboard-in {
   animation: dashboard-in 0.55s cubic-bezier(0.22, 0.61, 0.36, 1) both;
 }
@@ -272,6 +533,121 @@ button.bg-primary:hover:not(:disabled), a.bg-primary:hover {
   }
   .ai-border-glow {
     box-shadow: 0 0 0 1px rgba(190,90,46,0.35);
+  }
+}
+
+/* Final live-session viewport override: keep the three-column workspace full width. */
+@media (min-width: 1500px) {
+  main:has(> section.live-voice-layout) {
+    max-width: none !important;
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    height: calc(100vh - 90px) !important;
+    overflow: hidden !important;
+  }
+
+  main:has(> section.live-voice-layout) > div:first-child {
+    display: inline-flex !important;
+    margin: 1.25rem 0 0 clamp(2rem, 4vw, 5rem) !important;
+  }
+
+  section.live-voice-layout {
+    display: grid !important;
+    position: relative !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 100vw !important;
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding: 1.25rem clamp(2rem, 4vw, 5rem) 1.5rem !important;
+    box-sizing: border-box !important;
+    grid-template-columns: minmax(300px, 0.9fr) minmax(640px, 1.75fr) minmax(400px, 1fr) !important;
+    column-gap: clamp(1.25rem, 2vw, 2.5rem) !important;
+    height: calc(100vh - 155px) !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  section.live-voice-layout > .live-session-history {
+    grid-area: history !important;
+    min-height: 0 !important;
+    max-height: calc(100vh - 190px) !important;
+    overflow: hidden !important;
+  }
+
+  section.live-voice-layout > div:has(#continue-lesson-title) {
+    grid-area: resume !important;
+    width: 100% !important;
+    min-width: 420px !important;
+    max-width: none !important;
+    align-self: start !important;
+    padding: 1.5rem !important;
+    border-radius: 1.25rem !important;
+  }
+
+  section.live-voice-layout > div:has(#continue-lesson-title) > div {
+    width: 100% !important;
+  }
+
+  section.live-voice-layout > .live-session-history > div:last-child {
+    max-height: calc(100vh - 290px) !important;
+    overflow-y: auto !important;
+  }
+
+  section.live-voice-layout > div:has(.mt-6.rounded-2xl) {
+    grid-area: voice !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  section.live-voice-layout > div:has(.mt-6.rounded-2xl) > div {
+    padding: 1.25rem !important;
+  }
+
+  section.live-voice-layout > div:has(.mt-6.rounded-2xl) .mt-6.rounded-2xl {
+    margin-top: 1rem !important;
+    padding: 1rem !important;
+  }
+
+  section.live-voice-layout > div:has(.mt-6.rounded-2xl) footer.mt-5 {
+    margin-top: 1rem !important;
+    padding: 0.75rem !important;
+  }
+
+  /* When there are no side panels, let the live session use the workspace. */
+  section.live-voice-layout:not(:has(> .live-session-history)):not(:has(> div:has(#continue-lesson-title))) > div:has(.mt-6.rounded-2xl) {
+    grid-column: 1 / -1 !important;
+    width: min(1100px, 100%) !important;
+    justify-self: center !important;
+  }
+
+  section.live-voice-layout footer.mt-5 > div {
+    width: 100% !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    justify-items: stretch !important;
+    align-items: end !important;
+  }
+
+  section.live-voice-layout footer.mt-5 > div > label {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  section.live-voice-layout footer.mt-5 > div > label > select {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  section.live-voice-layout footer.mt-5 > label {
+    width: 100% !important;
+  }
+
+  section.live-voice-layout footer.mt-5 > label > select {
+    width: 100% !important;
   }
 }
 

@@ -19,7 +19,7 @@ import type { Role } from '@/lib/supabase/profile';
 
 type IconComponent = typeof HomeIcon;
 
-const NAV: Record<Role, { href: string; labelKey: string; icon: IconComponent }[]> = {
+const NAV: Record<Role, { href: string; labelKey: string; label?: string; icon: IconComponent }[]> = {
   admin: [
     { href: '/dashboard', labelKey: 'nav.dashboard', icon: HomeIcon },
     { href: '/ai-chat', labelKey: 'nav.aiChat', icon: ChatIcon },
@@ -42,9 +42,12 @@ const NAV: Record<Role, { href: string; labelKey: string; icon: IconComponent }[
     { href: '/students', labelKey: 'nav.students', icon: UsersIcon },
     { href: '/assignments', labelKey: 'nav.assignments', icon: ClipboardIcon },
     { href: '/performance', labelKey: 'nav.performance', icon: TrendingUpIcon },
+    { href: '/live-reports', labelKey: 'nav.performance', label: 'Live reports', icon: TrendingUpIcon },
   ],
   student: [
     { href: '/dashboard', labelKey: 'nav.dashboard', icon: HomeIcon },
+    { href: '/learning-videos?mode=live', labelKey: 'nav.learningVideos', label: 'Live Voice', icon: ChatIcon },
+    { href: '/learning-videos?mode=video', labelKey: 'nav.learningVideos', label: 'Avatar Videos', icon: BookIcon },
     // AI Chat is hidden from the student nav — Discussions covers this
     // role's AI use case now. Route/component/code all still live at
     // /ai-chat, just unlinked here. Re-add this entry to bring it back.
@@ -62,9 +65,9 @@ export default function Sidebar({ role, onNavigate }: { role: Role; onNavigate?:
   const items = [...NAV[role], { href: '/settings', labelKey: 'nav.settings', icon: SettingsIcon }];
 
   return (
-    <aside className="app-sidebar flex h-full w-[272px] shrink-0 flex-col bg-[#171936] px-4 py-5 text-white shadow-xl">
+    <aside className="app-sidebar flex h-full w-[272px] shrink-0 flex-col bg-[#172554] px-4 py-5 text-white shadow-xl">
       <Link href="/dashboard" onClick={onNavigate} className="flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-white/[0.05]">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#7775ff] to-[#514fc7] text-base font-bold text-white shadow-lg shadow-indigo-950/30">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#5574d2] to-[#3B58B6] text-base font-bold text-white shadow-lg shadow-blue-950/30">
           {APP_CONFIG.name.charAt(0)}
         </div>
         <div><p className="font-heading text-base font-semibold text-white">{APP_CONFIG.name}</p><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/40">Learning platform</p></div>
@@ -81,11 +84,11 @@ export default function Sidebar({ role, onNavigate }: { role: Role; onNavigate?:
               href={item.href}
               onClick={onNavigate}
               className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
-                active ? 'bg-gradient-to-r from-[#6967e8] to-[#5755cf] text-white shadow-lg shadow-black/15' : 'text-white/60 hover:bg-white/[0.07] hover:text-white'
+                active ? 'bg-gradient-to-r from-[#4d6bc7] to-[#3B58B6] text-white shadow-lg shadow-blue-950/25' : 'text-white/65 hover:bg-white/[0.09] hover:text-white'
               }`}
             >
               <Icon className="h-[18px] w-[18px] shrink-0" />
-              {t(item.labelKey)}
+              {item.label ?? t(item.labelKey)}
             </Link>
           );
         })}

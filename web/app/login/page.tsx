@@ -21,8 +21,15 @@ export default function LoginPage() {
 
   const handleLogin = async (event: FormEvent) => {
     event.preventDefault();
+    if (!email.trim() || !password) {
+      setError('Enter your email and password first.');
+      return;
+    }
     const supabase = createClient();
-    if (!supabase) return;
+    if (!supabase) {
+      setError('Supabase is not configured in this browser session. Restart the web dev server after checking web/.env.local.');
+      return;
+    }
     setLoading(true);
     setError(undefined);
 
@@ -32,7 +39,8 @@ export default function LoginPage() {
         password,
       });
       if (authError) throw authError;
-      router.push('/dashboard');
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', (await supabase.auth.getUser()).data.user?.id ?? '').maybeSingle();
+      router.push(profile?.role === 'student' ? '/learning-videos?mode=live' : '/dashboard');
       router.refresh();
     } catch (cause) {
       setError(getErrorMessage(cause, 'Unable to sign in.'));
@@ -93,7 +101,7 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              disabled={!isSupabaseConfigured || !email.trim() || !password || loading}
+              disabled={loading}
               className="w-full rounded-lg bg-accent px-4 py-3 text-sm font-semibold text-accent-foreground disabled:opacity-50"
             >
               {loading ? t('auth.signingIn') : t('auth.signIn')}

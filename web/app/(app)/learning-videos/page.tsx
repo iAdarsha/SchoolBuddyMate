@@ -4,7 +4,7 @@ import type { LearningVideo } from '@shared/domain/learning';
 import { getUserAndProfile } from '@/lib/supabase/profile';
 import { createClient } from '@/lib/supabase/server';
 
-export default async function LearningVideosPage() {
+export default async function LearningVideosPage({ searchParams }: { searchParams: Promise<{ mode?: string; autostart?: string; classId?: string; assignmentId?: string }> }) {
   const { user, profile } = await getUserAndProfile();
   if (!user || !profile) redirect('/login');
   const supabase = await createClient();
@@ -22,6 +22,9 @@ export default async function LearningVideosPage() {
     supabase.from('learning_videos').select('*, classes(name, class_groups(name))').order('created_at', { ascending: false }),
     supabase.from('video_progress').select('*'),
   ]);
+  const { data: materialRows } = profile.role === 'student'
+    ? await supabase.from('materials').select('id, class_id, title, chapter, video_url').eq('status', 'extracted').order('created_at', { ascending: true })
+    : { data: [] };
   const progress = (progressRows ?? []) as Array<{ video_id: string; student_id: string; completed: boolean; position_seconds: number; updated_at: string }>;
   const videos = ((videoRows ?? []) as unknown as Array<LearningVideo & { classes: { name: string; class_groups: { name: string } | null } | null }>).map((video) => ({
     ...video,
@@ -30,5 +33,7 @@ export default async function LearningVideosPage() {
     studentProgress: progress.find((item) => item.video_id === video.id && item.student_id === user.id) ?? null,
   }));
 
-  return <LearningVideosClient role={profile.role} userId={user.id} initialVideos={videos} classes={classes} />;
+  const params = await searchParams;
+  const requestedMode = params.mode === 'live' ? 'live' : 'video';
+  return <LearningVideosClient role={profile.role} userId={user.id} initialVideos={videos} classes={classes} initialMaterials={(materialRows ?? []) as Array<{ id: string; class_id: string; title: string; chapter: string | null; video_url: string | null }>} initialMode={requestedMode} autoStart={params.autostart === '1'} initialClassId={params.classId} assignmentId={params.assignmentId} />;
 }

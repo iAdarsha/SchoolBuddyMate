@@ -1,15 +1,17 @@
 'use client';
 
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import type { LearningVideo } from '@shared/domain/learning';
 import { getVideoEmbedUrl, isSafeVideoUrl } from '@shared/domain/learning';
 import type { Role } from '@shared/domain/profile';
 import { CheckIcon, PlayCircleIcon, PlusIcon, TrashIcon, XIcon } from '@/components/icons';
 import { createClient } from '@/lib/supabase/client';
+import LiveVoicePanel from '@/components/videos/LiveVoicePanel';
 
 interface ClassOption { id: string; label: string }
 interface ProgressView { video_id: string; student_id: string; completed: boolean; position_seconds: number; updated_at: string }
 interface VideoView extends LearningVideo { classLabel: string; completedCount: number; studentProgress?: ProgressView | null }
+interface StudentMaterial { id: string; class_id: string; title: string; chapter: string | null; video_url: string | null }
 
 function formatDuration(minutes: number | null) {
   if (!minutes) return 'Self-paced';
@@ -24,17 +26,30 @@ export default function LearningVideosClient({
   userId,
   initialVideos,
   classes,
+  initialMaterials = [],
+  initialMode = 'video',
+  autoStart = false,
+  initialClassId,
+  assignmentId,
 }: {
   role: Role;
   userId: string;
   initialVideos: VideoView[];
   classes: ClassOption[];
+  initialMaterials?: StudentMaterial[];
+  initialMode?: 'video' | 'live';
+  autoStart?: boolean;
+  initialClassId?: string;
+  assignmentId?: string;
 }) {
   const canManage = role === 'teacher';
   const canTrack = role === 'student';
   const [videos, setVideos] = useState(initialVideos);
   const [creating, setCreating] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(null);
+  const [generationElapsed, setGenerationElapsed] = useState(0);
+  const [generationStatus, setGenerationStatus] = useState('Starting HeyGen render…');
   const [activeVideoId, setActiveVideoId] = useState(initialVideos[0]?.id ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
@@ -48,8 +63,37 @@ export default function LearningVideosClient({
   const [generationStyle, setGenerationStyle] = useState('clear and engaging');
   const [generationDuration, setGenerationDuration] = useState('3');
   const [generationLanguage, setGenerationLanguage] = useState('English');
+  const [avatars, setAvatars] = useState<Array<{ avatar_id: string; avatar_name: string }>>([]);
+  const [voices, setVoices] = useState<Array<{ voice_id: string; name: string; language?: string }>>([]);
+  const [avatarId, setAvatarId] = useState('');
+  const [voiceId, setVoiceId] = useState('');
+  const [mode, setMode] = useState<'video' | 'live'>(initialMode);
+  const [selectedStudentClass, setSelectedStudentClass] = useState(classes[0]?.id ?? '');
+  const [selectedChapter, setSelectedChapter] = useState('');
+  const studentMaterials = useMemo(() => initialMaterials.filter((item) => item.class_id === selectedStudentClass), [initialMaterials, selectedStudentClass]);
+  const studentChapters = useMemo(() => [...new Set(studentMaterials.map((item) => item.chapter).filter((item): item is string => Boolean(item)))], [studentMaterials]);
+  const studentVideos = useMemo(() => videos.filter((item) => item.published && (!selectedStudentClass || item.class_id === selectedStudentClass)), [videos, selectedStudentClass]);
+  const chapterMaterials = useMemo(() => studentMaterials.filter((item) => !selectedChapter || item.chapter === selectedChapter), [studentMaterials, selectedChapter]);
   const activeVideo = useMemo(() => videos.find((item) => item.id === activeVideoId) ?? videos[0], [activeVideoId, videos]);
   const embedUrl = activeVideo ? getVideoEmbedUrl(activeVideo.video_url) : null;
+  const isDirectVideo = Boolean(activeVideo?.video_url && (activeVideo.video_url.includes('files.heygen.ai') || activeVideo.video_url.endsWith('.mp4')));
+
+  useEffect(() => {
+    if (!generationStartedAt) return;
+    const update = () => setGenerationElapsed(Math.floor((Date.now() - generationStartedAt) / 1000));
+    update();
+    const timer = window.setInterval(update, 1000);
+    return () => window.clearInterval(timer);
+  }, [generationStartedAt]);
+
+  useEffect(() => {
+    if (!canManage || !generating) return;
+    fetch('/api/heygen/options').then((response) => response.json()).then((data) => {
+      if (data?.error) { setError(data.error); return; }
+      setAvatars(Array.isArray(data.avatars) ? data.avatars : []);
+      setVoices(Array.isArray(data.voices) ? data.voices : []);
+    }).catch(() => setError('Could not load HeyGen avatars and voices.'));
+  }, [canManage, generating]);
 
   const createVideo = async (event: FormEvent) => {
     event.preventDefault();
@@ -135,7 +179,21 @@ export default function LearningVideosClient({
   };
 
   return (
-    <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">
+    <main className="learning-page w-full flex-1 px-[clamp(2rem,4vw,5rem)] py-10">
+      <div className="mb-8 inline-flex rounded-xl border border-border bg-card p-1 shadow-sm">
+        <button onClick={() => setMode('video')} className={`rounded-lg px-4 py-2 text-sm font-semibold ${mode === 'video' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{canTrack ? 'Avatar lessons' : 'Video lessons'}</button>
+        <button onClick={() => setMode('live')} className={`rounded-lg px-4 py-2 text-sm font-semibold ${mode === 'live' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}>{canTrack ? 'School Buddy Live' : 'Live voice'}</button>
+      </div>
+      {mode === 'live' ? <LiveVoicePanel classes={classes} userId={userId} autoStart={autoStart} initialClassId={initialClassId} assignmentId={assignmentId} /> : canTrack ? <>
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+          <div><h1 className="text-3xl font-bold text-foreground">Avatar lessons</h1><p className="mt-2 text-sm text-muted-foreground">Choose a subject and chapter, then learn with your School Buddy.</p></div>
+          <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Subject / class<select value={selectedStudentClass} onChange={(event) => { setSelectedStudentClass(event.target.value); setSelectedChapter(''); }} className="mt-2 block min-w-64 rounded-lg border border-border bg-card px-3 py-2 text-sm font-semibold normal-case text-foreground">{classes.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
+        </div>
+        <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+          <aside className="h-fit rounded-2xl border border-border bg-card p-4 shadow-sm"><p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">Chapters & documents</p><button onClick={() => setSelectedChapter('')} className={`mt-3 w-full rounded-lg px-3 py-2 text-left text-sm font-semibold ${!selectedChapter ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-background'}`}>All chapters</button>{studentChapters.length ? studentChapters.map((chapter) => <button key={chapter} onClick={() => setSelectedChapter(chapter)} className={`mt-1 w-full rounded-lg px-3 py-2 text-left text-sm ${selectedChapter === chapter ? 'bg-primary/10 font-semibold text-primary' : 'text-foreground hover:bg-background'}`}>{chapter}</button>) : <p className="mt-4 text-sm text-muted-foreground">No chapter documents published yet.</p>}{chapterMaterials.length > 0 && <div className="mt-5 border-t border-border pt-4"><p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Study documents</p>{chapterMaterials.map((material) => <p key={material.id} className="mt-2 truncate text-sm text-foreground">📄 {material.title}</p>)}</div>}</aside>
+          <section className="min-w-0"><div className="mb-4 flex items-center justify-between"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">{selectedChapter || 'Your lessons'}</p><h2 className="mt-1 text-xl font-bold text-foreground">Published avatar videos</h2></div></div>{studentVideos.length ? <div className="grid gap-4 sm:grid-cols-2">{studentVideos.map((video) => <button key={video.id} onClick={() => setActiveVideoId(video.id)} className={`rounded-xl border bg-card p-4 text-left shadow-sm ${activeVideo?.id === video.id ? 'border-primary ring-2 ring-primary/10' : 'border-border'}`}><span className="text-xs font-bold text-primary">AVATAR VIDEO</span><span className="mt-2 block font-semibold text-foreground">{video.title}</span><span className="mt-1 block text-xs text-muted-foreground">{formatDuration(video.duration_minutes)}</span></button>)}</div> : <div className="rounded-2xl border border-dashed border-border bg-card p-8 text-center"><h3 className="font-semibold text-foreground">No avatar videos published yet</h3><p className="mt-1 text-sm text-muted-foreground">Your teacher’s avatar lessons for this chapter will appear here when published.</p></div>}{activeVideo && studentVideos.some((video) => video.id === activeVideo.id) && <div className="mt-6 overflow-hidden rounded-xl border border-border bg-card shadow-sm"><div className="aspect-video bg-black">{isDirectVideo ? <video className="h-full w-full" src={activeVideo.video_url} controls /> : embedUrl ? <iframe className="h-full w-full" src={embedUrl} title={activeVideo.title} allowFullScreen /> : null}</div><div className="p-4"><h3 className="font-bold text-foreground">{activeVideo.title}</h3>{activeVideo.description && <p className="mt-2 text-sm text-muted-foreground">{activeVideo.description}</p>}</div></div>}</section>
+        </div>
+      </> : <>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Learning Videos</h1>
@@ -160,13 +218,67 @@ export default function LearningVideosClient({
             <h2 className="mt-1 text-xl font-bold text-foreground">Create a lesson video for your class</h2>
             <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Describe the lesson and HeyGen will create a narrated presenter video. It will stay private until you publish it.</p>
           </div>
-          <form onSubmit={(event) => { event.preventDefault(); setError('HeyGen generation is ready for API connection. Add HEYGEN_API_KEY to enable video creation.'); }} className="grid gap-4 px-5 py-5 sm:grid-cols-2 sm:px-6">
-            <label className="text-sm font-semibold text-foreground">Class
+          <form onSubmit={async (event) => {
+            event.preventDefault();
+            if (!window.confirm('This will use HeyGen API credits. Generate this lesson video with the selected avatar and voice?')) return;
+            const supabase = createClient();
+            if (!supabase) return;
+            setSaving(true);
+            setGenerationStartedAt(Date.now());
+            setGenerationElapsed(0);
+            setGenerationStatus('Starting HeyGen render…');
+            setError(undefined);
+            const response = await fetch('/api/heygen/video-agent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ classId, topic: generationTopic, objectives: generationObjectives, style: generationStyle, duration: Number(generationDuration), language: generationLanguage, avatarId, voiceId }) });
+            const started = await response.json().catch(() => null);
+            if (!response.ok || !started?.sessionId) {
+              setSaving(false);
+              setError(started?.error ?? 'Could not start video generation.');
+              return;
+            }
+            let completed: { status?: string; videoUrl?: string; duration?: number | null; failureMessage?: string | null } | null = null;
+            let pollingError: string | null = null;
+            for (let attempt = 0; attempt < 180; attempt += 1) {
+              await new Promise((resolve) => window.setTimeout(resolve, 5000));
+              const statusResponse = await fetch(`/api/heygen/video-agent?sessionId=${encodeURIComponent(started.sessionId)}`);
+              const status = await statusResponse.json().catch(() => null);
+              if (!statusResponse.ok) { pollingError = status?.error ?? 'Could not read generation status.'; break; }
+              setGenerationStatus(typeof status?.status === 'string' ? `HeyGen status: ${status.status}` : 'HeyGen is rendering…');
+              if (status?.status === 'completed' || status?.status === 'failed') { completed = status; break; }
+            }
+            if (!completed?.videoUrl || completed.status !== 'completed') {
+              setSaving(false);
+              setError(pollingError ?? completed?.failureMessage ?? 'HeyGen has not returned a completed video yet. The render may still be processing; try again later or check your HeyGen dashboard.');
+              return;
+            }
+            const { data, error: insertError } = await supabase.from('learning_videos').insert({ class_id: classId, created_by: userId, title: generationTopic.trim(), description: generationObjectives.trim(), video_url: completed.videoUrl, duration_minutes: completed.duration ? Math.ceil(completed.duration / 60) : Number(generationDuration), published: false }).select('*').single();
+            setSaving(false);
+            setGenerationStartedAt(null);
+            if (insertError || !data) { setError(insertError?.message ?? 'Video finished but could not be saved.'); return; }
+            const nextVideo: VideoView = { ...(data as LearningVideo), classLabel: classes.find((item) => item.id === classId)?.label ?? '', completedCount: 0, studentProgress: null };
+            setVideos((current) => [nextVideo, ...current]);
+            setActiveVideoId(nextVideo.id);
+            setGenerationTopic('');
+            setGenerationObjectives('');
+            setGenerating(false);
+          }} className="grid gap-4 px-5 py-5 sm:grid-cols-2 lg:grid-cols-4 sm:px-6">
+            <label className="text-sm font-semibold text-foreground lg:col-span-1">Class
               <select value={classId} onChange={(event) => setClassId(event.target.value)} className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 font-normal">
                 {classes.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
               </select>
             </label>
-            <label className="text-sm font-semibold text-foreground">Lesson topic
+            <label className="text-sm font-semibold text-foreground lg:col-span-1">Avatar <span className="text-xs font-normal text-primary">Recommended for testing</span>
+              <select value={avatarId} onChange={(event) => setAvatarId(event.target.value)} required className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 font-normal">
+                <option value="">Choose an avatar</option>
+                {avatars.map((avatar, index) => <option key={avatar.avatar_id} value={avatar.avatar_id}>{index === 0 ? '[RECOMMENDED] ' : ''}{avatar.avatar_name}</option>)}
+              </select>
+            </label>
+            <label className="text-sm font-semibold text-foreground lg:col-span-1">Voice <span className="text-xs font-normal text-primary">Recommended for testing</span>
+              <select value={voiceId} onChange={(event) => setVoiceId(event.target.value)} required className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 font-normal">
+                <option value="">Choose a voice</option>
+                {voices.map((voice, index) => <option key={voice.voice_id} value={voice.voice_id}>{index === 0 ? '[RECOMMENDED] ' : ''}{voice.name}{voice.language ? ` · ${voice.language}` : ''}</option>)}
+              </select>
+            </label>
+            <label className="text-sm font-semibold text-foreground lg:col-span-1">Lesson topic
               <input value={generationTopic} onChange={(event) => setGenerationTopic(event.target.value)} required placeholder="e.g. Photosynthesis" className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 font-normal" />
             </label>
             <label className="text-sm font-semibold text-foreground sm:col-span-2">Learning objectives
@@ -185,9 +297,14 @@ export default function LearningVideosClient({
                 <select value={generationLanguage} onChange={(event) => setGenerationLanguage(event.target.value)} className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 font-normal"><option>English</option><option>Hindi</option><option>Telugu</option><option>Spanish</option></select>
               </label>
             </div>
+            <div className="rounded-lg border border-warning/20 bg-warning/5 p-3 text-xs leading-5 text-muted-foreground sm:col-span-2">
+              <p className="font-semibold text-foreground">Credit-saving test settings</p>
+              <p className="mt-1">Use the recommended standard avatar and voice, keep the video at 1 minute, and avoid custom avatars, voice cloning, translations, and reruns. HeyGen decides the final credit usage; this is a safety recommendation, not a guaranteed price.</p>
+            </div>
             <div className="flex items-center justify-end gap-2 sm:col-span-2">
               <button type="button" onClick={() => setGenerating(false)} className="rounded-lg px-4 py-2 text-sm font-semibold text-muted-foreground">Cancel</button>
-              <button disabled={!generationTopic.trim() || !generationObjectives.trim()} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-40">Generate lesson video</button>
+              <button disabled={saving || !avatarId || !voiceId || !generationTopic.trim() || !generationObjectives.trim()} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-40">{saving ? `Generating video… ${Math.floor(generationElapsed / 60)}:${String(generationElapsed % 60).padStart(2, '0')}` : 'Generate lesson video'}</button>
+              {saving && <span className="text-xs text-muted-foreground">{generationStatus}</span>}
             </div>
           </form>
         </section>
@@ -221,7 +338,9 @@ export default function LearningVideosClient({
           {activeVideo && (
             <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
               <div className="aspect-video bg-black">
-                {embedUrl ? (
+                {isDirectVideo && activeVideo ? (
+                  <video className="h-full w-full" src={activeVideo.video_url} controls />
+                ) : embedUrl ? (
                   <iframe className="h-full w-full" src={embedUrl} title={activeVideo.title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
                 ) : (
                   <div className="flex h-full items-center justify-center text-sm text-white/70">Preview unavailable for this link.</div>
@@ -274,6 +393,7 @@ export default function LearningVideosClient({
           ))}
         </aside>
       </div>
+      </>}
     </main>
   );
 }

@@ -93,6 +93,9 @@ export default async function TeacherDashboard({ name, userId }: { name: string;
             <Link href="/assignments" className="rounded-lg bg-white/15 px-4 py-2 text-sm font-semibold text-primary-foreground">
               {t('dashboard.viewAssignments')}
             </Link>
+            <Link href="/live-reports" className="rounded-lg bg-white/15 px-4 py-2 text-sm font-semibold text-primary-foreground">
+              Review live reports
+            </Link>
           </>
         }
       />
