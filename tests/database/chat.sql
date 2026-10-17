@@ -49,7 +49,10 @@ select pg_temp.assert_true(chat_school_context(array['materials'],'photosynthesi
 select pg_temp.assert_true(chat_school_context(array['teachers'],'')->'limitations' ? 'roleLimited','teacher cannot list teacher accounts');
 select pg_temp.assert_true(chat_school_context(array['students'],'')::text like '%My Student%','teacher sees own roster');
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',true);
-select pg_temp.assert_true(chat_school_context(array['materials'],'photosynthesis')->'limitations' ? 'materialsNotShared','students do not gain teacher material access');
+select pg_temp.assert_true(
+  jsonb_array_length(chat_school_context(array['materials'],'photosynthesis')->'sources') > 0,
+  'students can search enrolled course materials'
+);
 select pg_temp.assert_true(jsonb_array_length(chat_school_context(array['teachers','students'],'')->'sources') = 0,'students cannot enumerate accounts');
 select pg_temp.assert_true(chat_school_context(array['classes','assignments'],'')::text not like '%FOREIGN_%','student retrieval respects enrollment/school');
 reset role;
